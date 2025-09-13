@@ -29,7 +29,6 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
-// app.options('*', cors(corsOptions)); // <-- REMOVE this line!
 app.use(bodyParser.json());
 
 let tokens = [];
@@ -69,4 +68,14 @@ app.post('/trigger-alert', async (req, res) => {
   }
 });
 
-module.exports = app;
+// --- THIS PART IS IMPORTANT FOR VERCEL ---
+const serverless = require('serverless-http');
+module.exports = serverless(app);
+// -----------------------------------------
+
+// If you still want to run locally, add this at the bottom (optional):
+if (require.main === module) {
+  app.listen(3000, () => {
+    console.log('Server running on http://localhost:3000');
+  });
+}
