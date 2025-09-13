@@ -29,7 +29,7 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // <--- CRUCIAL for preflight!
+// app.options('*', cors(corsOptions)); // <-- REMOVE this line!
 app.use(bodyParser.json());
 
 let tokens = [];
