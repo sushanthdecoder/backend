@@ -2,33 +2,38 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const admin = require('firebase-admin');
 const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
 
-// Path to the service key (relative to api/server.js)
-const serviceAccountPath = path.join(__dirname, '..', 'firebase-service-key.json');
-
-if (!fs.existsSync(serviceAccountPath)) {
-  throw new Error('Missing firebase-service-key.json! Make sure to upload it as a secret on Vercel, or add it locally for development.');
+// Use a service account key from an environment variable if available
+let serviceAccount;
+if (process.env.FIREBASE_SERVICE_KEY) {
+  try {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_KEY);
+  } catch (e) {
+    throw new Error('Invalid FIREBASE_SERVICE_KEY JSON in environment variable');
+  }
+} else {
+  // fallback for local development (file must be in root, NOT committed to git)
+  serviceAccount = require('../firebase-service-key.json');
 }
 
-const serviceAccount = require(serviceAccountPath);
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount)
-});
+// Prevent double initialization in dev
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+}
 
 const app = express();
 const corsOptions = {
-  origin: 'https://sih-hackthon-alpha.vercel.app', // <-- your frontend domain
+  origin: 'https://sih-hackthon-alpha.vercel.app',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true,
 };
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Enable preflight for all routes
+app.options('*', cors(corsOptions)); // Enable CORS preflight for all routes
 app.use(bodyParser.json());
 
-// In-memory token storage (WARNING: Will NOT persist between serverless invocations!)
+// In-memory token storage - NOT for production!
 let tokens = [];
 
 // Register FCM token
@@ -53,8 +58,8 @@ app.post('/trigger-alert', async (req, res) => {
       body: notification.body
     },
     data: {
-      disaster: disaster,
-      message: message
+      disaster,
+      message
     }
   };
   try {
