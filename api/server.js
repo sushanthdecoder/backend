@@ -12,11 +12,10 @@ if (process.env.FIREBASE_SERVICE_KEY) {
     throw new Error('Invalid FIREBASE_SERVICE_KEY JSON in environment variable');
   }
 } else {
-  // fallback for local development (file must be in root, NOT committed to git)
+  // fallback for local development
   serviceAccount = require('../firebase-service-key.json');
 }
 
-// Prevent double initialization in dev
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
@@ -30,20 +29,17 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Enable CORS preflight for all routes
+app.options('*', cors(corsOptions)); // <--- CRUCIAL for preflight!
 app.use(bodyParser.json());
 
-// In-memory token storage - NOT for production!
 let tokens = [];
 
-// Register FCM token
 app.post('/register-token', (req, res) => {
   const { token } = req.body;
   if (token && !tokens.includes(token)) tokens.push(token);
   res.send({ status: 'token registered' });
 });
 
-// Trigger alert to all registered tokens
 app.post('/trigger-alert', async (req, res) => {
   const { disaster, message } = req.body;
   const notification = {
@@ -73,5 +69,4 @@ app.post('/trigger-alert', async (req, res) => {
   }
 });
 
-// Export the app for Vercel serverless
 module.exports = app;
